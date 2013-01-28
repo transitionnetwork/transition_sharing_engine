@@ -1,0 +1,85 @@
+<?php
+
+/**
+ * Implementation of hook_feeds_plugins().
+ */
+function transition_sharing_engine_feeds_plugins() {
+  $info = array();
+  $info['FeedDirectoryParser'] = array(
+    'name' => 'Transition Feed Directory parser',
+    'description' => 'Parses JSON data into Feed Meta nodes.',
+    'handler' => array(
+      'parent' => 'FeedsParser', // A plugin needs to derive either directly or indirectly from FeedsFetcher, FeedsParser or FeedsProcessor.
+      'class' => 'FeedDirectoryParser',
+      'file' => 'FeedDirectoryParser.inc',
+      'path' => drupal_get_path('module', 'transition_sharing_engine'),
+    ),
+  );
+  $info['FeedsMetaNodeProcessor'] = array(
+    'name' => 'Transition Meta Node Processor',
+    'description' => 'Create and update Feed Meta nodes from parsed content.',
+    'handler' => array(
+      'parent' => 'FeedsNodeProcessor', // A plugin needs to derive either directly or indirectly from FeedsFetcher, FeedsParser or FeedsProcessor.
+      'class' => 'FeedsMetaNodeProcessor',
+      'file' => 'FeedsMetaNodeProcessor.inc',
+      'path' => drupal_get_path('module', 'transition_sharing_engine'),
+    ),
+  );
+
+  return $info; 
+}
+
+function transition_sharing_engine_enable() {
+  //clear the cache to display in Feeds as available plugin.
+  cache_clear_all('plugins:feeds:plugins', 'cache');
+}
+
+
+ 
+/**
+ * Implements feeds_node_processor_target_alter().
+ *
+ * @param $targets array of target fields
+ * @param $content_type
+ */
+function transition_sharing_engine_feeds_node_processor_targets_alter(&$targets, $content_type) {
+  $targets['source'] = array(
+    'name' => t('Feed source'),
+    'description' => t('Depending on the selected fetcher, this could be for example a URL or a path to a file.'),
+    'callback' => 'transition_sharing_engine_assign_source',
+    'optional_unique' => TRUE,
+  );
+  //print_r($targets);
+}
+
+function transition_sharing_engine_assign_source($target_node, $target_element, $value) {
+  if ($target_element == 'source') {
+    // Get the class of the feed node importer's fetcher and set the source
+    // property. See feeds_nodeapi() how $node->feeds gets stored.
+    $class = get_class(_transition_sharing_engine_feedNodeImporter($target_node->type)->fetcher);
+    $target_node->feeds[$class]['source'] = $value;
+  }
+  
+}
+/**
+* Helper for retrieving the importer object for the feed nodes to produce.
+*/
+function _transition_sharing_engine_feedNodeImporter($type) {
+  if ($id = feeds_get_importer_id($type)) {
+    return feeds_importer($id);
+  }
+  else {
+    throw new Exception(t('Content type to be created is not a valid Feed content type.'));
+  }
+}
+
+
+
+function transition_sharing_engine_views_pre_execute(&$view) {
+  if ($view->name == 'transition_se_feed_items_search') {
+    $max_items = $view->args[2];
+    if (!is_numeric($max_items) || $max_items > 50 || $max_items < 1) $max_items = 10;
+    $view->set_items_per_page($max_items);
+    print_r($view->page['items_per_page']);
+  }
+}

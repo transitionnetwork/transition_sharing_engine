@@ -1,0 +1,13 @@
+name = Transition Sharing Engine
+description = Aggregates RSS/Atom/RDF feeds from across the Transition Network
+package = Transition Network
+dependencies[] = feeds
+dependencies[] = views
+dependencies[] = data
+dependencies[] = ctools
+dependencies[] = job_scheduler
+core = 6.x
+
+version = "6.x-1.0-DEV"
+core = "6.x"
+
